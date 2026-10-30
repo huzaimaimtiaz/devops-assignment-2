@@ -1,0 +1,56 @@
+# Part-II: same application, brought up by the Jenkins pipeline.
+#
+# Differences from Part-I, as required by the assignment:
+#   - no build step and no Dockerfile. The application code is attached as a
+#     volume, so the container serves whatever was just fetched from GitHub.
+#   - different host ports:     web 8200 -> 80, db 3308 -> 3306
+#   - different container names: atc-web-ci, atc-db-ci
+#   - its own compose project and its own data volume, so the Part-I
+#     deployment is never touched by the pipeline.
+
+name: atc-part2
+
+services:
+  db-ci:
+    image: mysql:8.0
+    container_name: atc-db-ci
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "Root_2026"
+      MYSQL_DATABASE: "atcdb"
+      MYSQL_USER: "atcapp"
+      MYSQL_PASSWORD: "Atcapp_2026"
+    volumes:
+      - atc_db_data_ci:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3308:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pRoot_2026"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+
+  web-ci:
+    image: huzaimaimtiaz/atc-web:v1
+    container_name: atc-web-ci
+    restart: unless-stopped
+    depends_on:
+      db-ci:
+        condition: service_healthy
+    environment:
+      DB_HOST: "db-ci"
+      DB_PORT: "3306"
+      DB_NAME: "atcdb"
+      DB_USER: "atcapp"
+      DB_PASS: "Atcapp_2026"
+      APP_PART: "Part-II (code mounted as a volume by the Jenkins pipeline)"
+    volumes:
+      # Application code comes from the volume, not from the image.
+      - ./app:/var/www/html:ro
+    ports:
+      - "8200:80"
+
+volumes:
+  atc_db_data_ci:

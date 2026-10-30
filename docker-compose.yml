@@ -1,0 +1,51 @@
+# Part-I: containerized deployment of the ATC Flight Strip Console.
+#
+#   web  container port 80   -> host port 8100
+#   db   container port 3306 -> host port 3307
+#
+# The database container has a volume attached so the data stays persistent
+# across docker compose down and up.
+
+name: atc-part1
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: atc-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "Root_2026"
+      MYSQL_DATABASE: "atcdb"
+      MYSQL_USER: "atcapp"
+      MYSQL_PASSWORD: "Atcapp_2026"
+    volumes:
+      - atc_db_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pRoot_2026"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+
+  web:
+    image: huzaimaimtiaz/atc-web:v1
+    container_name: atc-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: "db"
+      DB_PORT: "3306"
+      DB_NAME: "atcdb"
+      DB_USER: "atcapp"
+      DB_PASS: "Atcapp_2026"
+      APP_PART: "Part-I (code baked into the image by the Dockerfile)"
+    ports:
+      - "8100:80"
+
+volumes:
+  atc_db_data:
