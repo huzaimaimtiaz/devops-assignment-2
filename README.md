@@ -1,6 +1,6 @@
 # ATC Flight Strip Console
 
-CSC418 DevOps for Cloud Computing, Assignment 2
+CSC418 DevOps for Cloud Computing, Assignment # 2
 Huzaima Imtiaz, FA23-BDS-017, BDS-7
 
 A PHP web application backed by a MySQL database, deployed on AWS EC2 in two
