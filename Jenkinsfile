@@ -128,45 +128,35 @@ pipeline {
                 }
                 echo "Sending build result to ${recipients}"
 
-                def colour = (result == 'SUCCESS') ? '#1f6f54' : '#8a2f2f'
+                def summary = """ATC Flight Strip Console - Part-II build
 
-                emailext(
-                    to: recipients,
-                    subject: "ATC Flight Strip Console Part-II: ${result} (#${env.BUILD_NUMBER})",
-                    mimeType: 'text/html',
-                    body: """
-                      <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#16181d">
-                        <h2 style="margin:0 0 6px">ATC Flight Strip Console - Part-II build</h2>
-                        <p style="margin:0 0 14px;color:#5f6672">
-                          CSC418 DevOps for Cloud Computing, Assignment 2, FA23-BDS-017
-                        </p>
-                        <p style="font-size:16px;font-weight:bold;color:${colour};margin:0 0 14px">
-                          Build result: ${result}
-                        </p>
-                        <table cellpadding="6" cellspacing="0"
-                               style="border-collapse:collapse;font-size:14px">
-                          <tr><td><b>Job</b></td><td>${env.JOB_NAME} #${env.BUILD_NUMBER}</td></tr>
-                          <tr><td><b>Triggered by push from</b></td>
-                              <td>${env.PUSHER_NAME ?: 'unknown'} &lt;${env.PUSHER_EMAIL ?: 'unknown'}&gt;</td></tr>
-                          <tr><td><b>Commit</b></td><td>${env.COMMIT_SHA ?: 'unknown'}</td></tr>
-                          <tr><td><b>Commit message</b></td><td>${env.COMMIT_MSG ?: ''}</td></tr>
-                          <tr><td><b>Branch</b></td><td>${env.GIT_BRANCH ?: 'main'}</td></tr>
-                          <tr><td><b>Duration</b></td><td>${duration}</td></tr>
-                          <tr><td><b>Application URL</b></td>
-                              <td><a href="http://${env.PUBLIC_IP}:${env.APP_PORT}/index.php">http://${env.PUBLIC_IP}:${env.APP_PORT}/index.php</a></td></tr>
-                          <tr><td><b>Console log</b></td>
-                              <td><a href="${env.BUILD_URL}console">${env.BUILD_URL}console</a></td></tr>
-                        </table>
-                        <h3 style="margin:20px 0 6px;font-size:14px">Build log (last 60 lines)</h3>
-                        <pre style="background:#f4f5f7;border:1px solid #d9dde3;border-radius:4px;
-                                    padding:10px;font-size:12px;white-space:pre-wrap;
-                                    word-break:break-word">\${BUILD_LOG, maxLines=60, escapeHtml=true}</pre>
-                        <p style="margin:14px 0 0;color:#5f6672">
-                          Full console output: <a href="${env.BUILD_URL}console">${env.BUILD_URL}console</a>
-                        </p>
-                      </div>
-                    """
-                )
+CSC418 DevOps for Cloud Computing, Assignment 2
+Huzaima Imtiaz, FA23-BDS-017
+
+Build result : ${result}
+Job          : ${env.JOB_NAME} #${env.BUILD_NUMBER}
+Pushed by    : ${env.PUSHER_NAME ?: 'unknown'} <${env.PUSHER_EMAIL ?: 'unknown'}>
+Commit       : ${env.COMMIT_SHA ?: 'unknown'} - ${env.COMMIT_MSG ?: ''}
+Branch       : ${env.GIT_BRANCH ?: 'main'}
+Duration     : ${duration}
+
+The Part-II deployment is now running at:
+  http://${env.PUBLIC_IP}:${env.APP_PORT}/index.php
+
+Full console output:
+  ${env.BUILD_URL}console
+
+Pipeline stages: checkout from GitHub, PHP syntax check inside a
+php:8.2-cli container via the Docker Pipeline plugin, docker compose
+deployment with the application code attached as a volume, and an HTTP
+plus database connectivity check against the running container.
+"""
+
+                // The Mailer plugin's own SMTP settings are used here, which
+                // are the ones verified with "Test configuration".
+                mail to: recipients,
+                     subject: "ATC Flight Strip Console Part-II: ${result} (#${env.BUILD_NUMBER})",
+                     body: summary
             }
         }
     }
