@@ -117,15 +117,28 @@ pipeline {
                 def result = currentBuild.currentResult ?: 'UNKNOWN'
                 def duration = currentBuild.durationString.replace(' and counting', '')
 
-                // The build result goes back to whoever made the push, and to
-                // nobody else. If GitHub hid the author behind a noreply
-                // address, fall back by who the commit says it came from.
-                def recipients = env.PUSHER_EMAIL
-                if (!recipients || recipients.endsWith('users.noreply.github.com')) {
-                    def who = (env.PUSHER_NAME ?: '').toLowerCase()
-                    recipients = who.contains('huzaima') ? env.OWNER_EMAIL
-                                                         : env.COLLABORATOR_EMAIL
+                // The build result goes back to whoever made the push.
+                // GitHub often hides the author behind a noreply address, so
+                // the commit author name decides who the push came from.
+                def authorEmail = env.PUSHER_EMAIL ?: ''
+                def authorName  = (env.PUSHER_NAME ?: '').toLowerCase()
+                def usable = authorEmail && !authorEmail.endsWith('users.noreply.github.com')
+                def pushedByOwner = authorName.contains('huzaima') ||
+                                    authorEmail == env.OWNER_EMAIL
+
+                def targets = []
+                if (pushedByOwner) {
+                    // Own test push. Never mail the collaborator for these.
+                    targets << env.OWNER_EMAIL
+                } else {
+                    // Someone else pushed, so this is the collaborator.
+                    // Mail the address on the commit when it is a real one,
+                    // and always the collaborator's known address as well.
+                    if (usable) { targets << authorEmail }
+                    targets << env.COLLABORATOR_EMAIL
                 }
+                def recipients = targets.unique().join(',')
+                echo "Push author: ${env.PUSHER_NAME} <${authorEmail}>"
                 echo "Sending build result to ${recipients}"
 
                 def summary = """ATC Flight Strip Console - Part-II build
