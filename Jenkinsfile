@@ -23,7 +23,10 @@ pipeline {
         COMPOSE_PROJECT    = 'atc-part2'
         DEPLOY_DIR         = '/srv/ci/assignment-2'
         APP_PORT           = '8200'
+        // Fallbacks only. The notification goes to the author of the push;
+        // these are used when GitHub hides the author behind a noreply address.
         COLLABORATOR_EMAIL = 'qasimalik@gmail.com'
+        OWNER_EMAIL        = 'huzaimaimtiaz2@gmail.com'
         // Public IP of the EC2 instance, used in the notification email.
         PUBLIC_IP          = '65.1.224.36'
     }
@@ -114,20 +117,23 @@ pipeline {
                 def result = currentBuild.currentResult ?: 'UNKNOWN'
                 def duration = currentBuild.durationString.replace(' and counting', '')
 
-                // Email the person who pushed, plus the collaborator.
-                def targets = []
-                if (env.PUSHER_EMAIL && !env.PUSHER_EMAIL.endsWith('users.noreply.github.com')) {
-                    targets << env.PUSHER_EMAIL
+                // The build result goes back to whoever made the push, and to
+                // nobody else. If GitHub hid the author behind a noreply
+                // address, fall back by who the commit says it came from.
+                def recipients = env.PUSHER_EMAIL
+                if (!recipients || recipients.endsWith('users.noreply.github.com')) {
+                    def who = (env.PUSHER_NAME ?: '').toLowerCase()
+                    recipients = who.contains('huzaima') ? env.OWNER_EMAIL
+                                                         : env.COLLABORATOR_EMAIL
                 }
-                targets << env.COLLABORATOR_EMAIL
-                def recipients = targets.unique().join(',')
+                echo "Sending build result to ${recipients}"
 
                 def colour = (result == 'SUCCESS') ? '#1f6f54' : '#8a2f2f'
 
                 emailext(
                     to: recipients,
-                    recipientProviders: [developers(), requestor()],
-                    subject: "Jenkins ${result}: ${env.JOB_NAME} #${env.BUILD_NUMBER} (ATC Flight Strip Console)",
+                    recipientProviders: [developers()],
+                    subject: "ATC Flight Strip Console Part-II: ${result} (#${env.BUILD_NUMBER})",
                     mimeType: 'text/html',
                     attachLog: true,
                     compressLog: false,
